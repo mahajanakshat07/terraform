@@ -14,12 +14,23 @@ provider "aws" {
 }
 
 resource "aws_instance" "web" {
-ami           =  "ami-04505e74c0741db8d"
+ami           =  data.aws_ami.packer_image.id
 instance_type = "t2.micro"
 
 tags = {
 Name = "HelloWorld"
 }
+}
+
+
+
+
+data "aws_ami" "packer_image" {
+  most_recent = true
+
+  
+
+  owners = ["186972323852"] # Canonical
 }
 
 # resource "aws_vpc" "prodvpc" {
