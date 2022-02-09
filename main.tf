@@ -13,170 +13,63 @@ provider "aws" {
   secret_key = "kUGXKuFeMBODvpC39GZQumorIvLzzzdaQ3cRZvdJ"
 }
 
-resource "aws_instance" "web" {
-ami           =  data.aws_ami.packer_image.id
-instance_type = "t2.micro"
 
-tags = {
-Name = "HelloWorld"
+resource "aws_glue_catalog_database" "data" {
+    name = "mydatabase"
+  
 }
+resource "aws_iam_role" "my-role" {
+ name = "my-role"
+
+ assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy" "my-policy" {
+ name = "my-policy"
+ role = aws_iam_role.my-role.id
+ policy = "${file("hello.json")}"
+
+
+ # This policy is exclusively available by my-role.
+}
+
+resource "aws_glue_job" "example" {
+  name     = "example"
+  role_arn = "arn:aws:iam::186972323852:role/service-role/AWSGlueServiceRole-Etl"
+
+  command {
+    script_location = "s3://fifadataforetl/code.py"
+  }
 }
 
 
 
+    resource "aws_glue_crawler" "example" {
+  database_name = aws_glue_catalog_database.data.name
+  name          = "example"
+  role          =  "arn:aws:iam::186972323852:role/service-role/AWSGlueServiceRole-Etl"
 
-data "aws_ami" "packer_image" {
-  most_recent = true
+  s3_target {
+    path = "s3://fifadataforetl/terraform/data.csv"
+  }
+
+  provisioner "local-exec" {
+    command = "aws glue start-crawler --name ${self.name}"
+  }
+}
 
   
-
-  owners = ["186972323852"] # Canonical
-}
-
-# resource "aws_vpc" "prodvpc" {
-#   cidr_block       = "10.0.0.0/16"
-  
-
-#   tags = {
-#     Name = "production"
-#   }
-# }
-
-# resource "aws_internet_gateway" "gw" {
-#   vpc_id = aws_vpc.prodvpc.id
-# }
-
-# resource "aws_route_table" "prod-route-table" {
-#   vpc_id = aws_vpc.prodvpc.id
-
-#   route {
-#     cidr_block = "0.0.0.0/0"
-#     gateway_id = aws_internet_gateway.gw.id
-#   }
-
-#   route {
-#     ipv6_cidr_block        = "::/0"
-#     gateway_id = aws_internet_gateway.gw.id
-#   }
-
-#   tags = {
-#     Name = "prod"
-#   }
-# }
-
-# variable "subnet_prefix" {
-# description = "cidr block for subnet"
-# type = string
-  
-# }
-
-
-# resource "aws_subnet" "subnet-1" {
-#   vpc_id     = aws_vpc.prodvpc.id
-#   cidr_block = "10.0.1.0/24"
-#   availability_zone = "us-east-1a"
-
-#   tags = {
-#     Name = "Prodsubnet"
-#   }
-# }
-
-# resource "aws_route_table_association" "a" {
-#   subnet_id      = aws_subnet.subnet-1.id
-#   route_table_id = aws_route_table.prod-route-table.id
-# }
-
-# resource "aws_security_group" "allow_web" {
-#   name        = "allow_web_traffic"
-#   description = "Allow web traffic"
-#   vpc_id      = aws_vpc.prodvpc.id
-
-#   ingress {
-#     description      = "Https from VPC"
-#     from_port        = 443
-#     to_port          = 443
-#     protocol         = "tcp"
-#     cidr_blocks      = ["0.0.0.0/0"]
-#   }
-
-#   ingress {
-#     description      = "Http from VPC"
-#     from_port        = 80
-#     to_port          = 80
-#     protocol         = "tcp"
-#     cidr_blocks      = ["0.0.0.0/0"]
-#   }
-
-#   ingress {
-#     description      = "SSH from VPC"
-#     from_port        = 22
-#     to_port          = 22
-#     protocol         = "tcp"
-#     cidr_blocks      = ["0.0.0.0/0"]
-#   }
-
-#   egress {
-#     from_port        = 0
-#     to_port          = 0
-#     protocol         = "-1"
-#     cidr_blocks      = ["0.0.0.0/0"]
-#     ipv6_cidr_blocks = ["::/0"]
-#   }
-
-#   tags = {
-#     Name = "allow_web"
-#   }
-# }
-
-
-# resource "aws_network_interface" "web-server-nic" {
-#   subnet_id       = aws_subnet.subnet-1.id
-#   private_ips     = ["10.0.1.50"]
-#   security_groups = [aws_security_group.allow_web.id]
-
-# }
-
-# resource "aws_eip" "one" {
-#   vpc                       = true
-#   network_interface         = aws_network_interface.web-server-nic.id
-#   associate_with_private_ip = "10.0.1.50"
-#   depends_on =  [aws_internet_gateway.gw]
-# }
-
-
-# resource "aws_instance" "web" {
-# ami           =  "ami-04505e74c0741db8d"
-# instance_type = "t2.micro"
-# availability_zone = "us-east-1a"
-# key_name = "EC2tutorial"
-
-# network_interface {
-#   device_index = 0
-#   network_interface_id = aws_network_interface.web-server-nic.id
-
-# }
-
-# user_data = <<-EOF
-#              #!/bin/bash
-#               sudo apt update -y
-#               sudo apt  install apache2 -y
-#               sudo systemctl start apache2
-#               sudo bash -c 'echo your first web server > /var/www/html/index.html'
-#               EOF
-             
-
-
-# tags = {
-# Name = "HelloWorld"
-# }
-# }
-
-
-
-
-
-
-
-
-
-
